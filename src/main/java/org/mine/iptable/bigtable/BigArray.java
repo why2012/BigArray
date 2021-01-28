@@ -24,6 +24,10 @@ public class BigArray implements AutoCloseable {
         mappedPageFactory.close();
     }
 
+    public void deletePages() {
+        mappedPageFactory.deleteAllPages();
+    }
+
     public static class Builder {
         private final String dir;
         private final String dataFilePrefix;

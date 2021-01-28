@@ -55,9 +55,7 @@ public class MappedPageFactory implements AutoCloseable {
     }
 
     public IMappedPage getPage(int index) {
-        if (index >= pageCount || index < 0) {
-            throw new IndexOutOfBoundsException("illegal index " + index + ", while pageSize=" + pageCount);
-        }
+        checkAvailableIndex(index);
         return loadPage(index);
     }
 
@@ -102,6 +100,12 @@ public class MappedPageFactory implements AutoCloseable {
         return null;
     }
 
+    private void checkAvailableIndex(int index) {
+        if (index >= pageCount || index < 0) {
+            throw new IndexOutOfBoundsException("illegal index " + index + ", while pageSize=" + pageCount);
+        }
+    }
+
     private String getIndexPagePath(int index) {
         return indexDirectory + getIndexPageName(index);
     }
@@ -112,8 +116,31 @@ public class MappedPageFactory implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         pageCache.expireAll();
+    }
+
+    public boolean deletePage(int index) {
+        checkAvailableIndex(index);
+        File pageFile = new File(getIndexPagePath(index));
+        if (pageFile.exists() && pageFile.isFile()) {
+            IMappedPage mappedPage = pageCache.remove(index);
+            try {
+                if (mappedPage != null && !mappedPage.isClosed()) {
+                    mappedPage.close();
+                }
+                return pageFile.delete();
+            } catch (Exception e) {
+                logger.error("delete page error", e);
+            }
+        }
+        return false;
+    }
+
+    public void deleteAllPages() {
+        for (int pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+            deletePage(pageIndex);
+        }
     }
 
     private void init() {

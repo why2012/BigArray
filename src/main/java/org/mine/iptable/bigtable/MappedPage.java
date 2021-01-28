@@ -60,7 +60,10 @@ public class MappedPage implements IMappedPage {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
+        if (closed) {
+            return;
+        }
         byteBuffer.force();
         Cleaner.clean(byteBuffer);
         byteBuffer = null;

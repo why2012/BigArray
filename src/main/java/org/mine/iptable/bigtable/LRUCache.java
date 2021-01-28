@@ -3,10 +3,7 @@ package org.mine.iptable.bigtable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -87,10 +84,13 @@ public class LRUCache<K, T extends ICloseable> {
     public void expireAll() {
         try {
             writeLock.lock();
-            for (Map.Entry<K, T> entry: cache.entrySet()) {
+            Iterator<Map.Entry<K, T>> iter = cache.entrySet().iterator();
+            while (iter.hasNext()){
+                Map.Entry<K, T> entry = iter.next();
                 if (!entry.getValue().isClosed()) {
                     entry.getValue().close();
                 }
+                iter.remove();
             }
         } catch (Exception e) {
             logger.error("expireAll error: ", e);

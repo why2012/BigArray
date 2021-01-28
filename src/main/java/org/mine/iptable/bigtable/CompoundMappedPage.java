@@ -27,6 +27,9 @@ public class CompoundMappedPage implements IMappedPage {
 
     @Override
     public void close() throws Exception {
+        if (closed) {
+            return;
+        }
         closed = true;
         pageCache.expireAll();
         fileChannel.close();
