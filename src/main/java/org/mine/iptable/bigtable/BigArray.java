@@ -19,6 +19,14 @@ public class BigArray implements AutoCloseable {
         return maxPageCount;
     }
 
+    public int subPageSizeInBytes() {
+        return mappedPageFactory.subPageSizeInBytes();
+    }
+
+    public int pageCount() {
+        return mappedPageFactory.pageCount();
+    }
+
     @Override
     public void close() throws Exception {
         mappedPageFactory.close();
@@ -78,7 +86,7 @@ public class BigArray implements AutoCloseable {
 
         public BigArray build() {
             MappedPageFactory mappedPageFactory = new MappedPageFactory(dir, dataFilePrefix, pageSizeInBytes, maxPageInMem, subPageSizeInBytes, maxSubPageInMem);
-            return new BigArray(pageSizeInBytes, maxPageCount, mappedPageFactory);
+            return new BigArray(mappedPageFactory.pageSizeInBytes(), maxPageCount, mappedPageFactory);
         }
     }
 
@@ -123,12 +131,16 @@ public class BigArray implements AutoCloseable {
         mappedPageFactory.getPage().putByte(value);
     }
 
-    private int getPageIndex(long index) {
+    public int getPageIndex(long index) {
         return (int)(index / pageSizeInBytes);
     }
 
-    private int getIndexInPage(long index) {
+    public int getIndexInPage(long index) {
         return (int)(index % pageSizeInBytes);
+    }
+
+    public IMappedPage getMappedPage(int pageIndex) {
+        return mappedPageFactory.getPage(pageIndex);
     }
 
     private void checkIndex(long index) {

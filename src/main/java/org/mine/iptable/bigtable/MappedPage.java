@@ -10,10 +10,12 @@ import java.nio.MappedByteBuffer;
 public class MappedPage implements IMappedPage {
     private static Logger logger = LoggerFactory.getLogger(MappedPage.class);
     private MappedByteBuffer byteBuffer;
+    private final int pageSizeInBytes;
     private volatile boolean closed;
 
-    public MappedPage(MappedByteBuffer mappedByteBuffer) {
+    public MappedPage(MappedByteBuffer mappedByteBuffer, int pageSizeInBytes) {
         byteBuffer = mappedByteBuffer;
+        this.pageSizeInBytes = pageSizeInBytes;
         closed = false;
     }
 
@@ -51,6 +53,42 @@ public class MappedPage implements IMappedPage {
     public void putByte(byte v) {
         checkClosed();
         byteBuffer.put(v);
+    }
+
+    @Override
+    public byte[] loadBytes(int offset, int length) {
+        byte[] buf = new byte[length];
+        for (int i = offset; i < length; i++) {
+            buf[i] = byteBuffer.get(i);
+        }
+        return buf;
+    }
+
+    @Override
+    public void putBytes(byte[] buf, int offset, int length) {
+        byteBuffer.put(buf, offset, length);
+        byteBuffer.force();
+    }
+
+    @Override
+    public int[] load4Bytes(int offset, int length) {
+        int[] buf = new int[length];
+        for (int i = offset; i < length; i++) {
+            buf[i] = byteBuffer.getInt(i * 4);
+        }
+        return buf;
+    }
+
+    @Override
+    public void put4Bytes(int[] buf, int offset, int length) {
+        for (int i = offset, bufIndex = 0; i < length; i++, bufIndex++) {
+            byteBuffer.putInt(i * 4, buf[bufIndex]);
+        }
+    }
+
+    @Override
+    public void force() {
+        byteBuffer.force();
     }
 
     private void checkClosed() {

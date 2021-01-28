@@ -81,6 +81,19 @@ public class LRUCache<K, T extends ICloseable> {
         }
     }
 
+    public Set<T> values() {
+        try {
+            readLock.lock();
+            Set<T> set = new HashSet<>();
+            for (Map.Entry<K, T> entry: cache.entrySet()) {
+                set.add(entry.getValue());
+            }
+            return set;
+        } finally {
+            readLock.unlock();
+        }
+    }
+
     public void expireAll() {
         try {
             writeLock.lock();

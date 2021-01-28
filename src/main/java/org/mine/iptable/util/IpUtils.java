@@ -1,6 +1,8 @@
 package org.mine.iptable.util;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 
 public class IpUtils {

@@ -1,6 +1,7 @@
 package org.mine.iptable;
 
 import org.mine.iptable.bigtable.BigArray;
+import org.mine.iptable.util.BigArrayUtils;
 import org.mine.iptable.util.IpUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,28 +11,68 @@ import java.io.RandomAccessFile;
 import java.lang.management.ManagementFactory;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
+import java.util.Random;
 
+/**
+ * 示例输出:
+ * 1 4 39 36 10 18 35 22 40 27 14 34 39 10 11 27 9 1 19 29 10 3 25 36 16
+ * 1 1 3 4 9 10 10 10 11 14 16 18 19 22 25 27 27 29 34 35 36 36 39 39 40
+ * [main] WARN org.mine.iptable.Bootstrap - .\data\ips.txt already exist, skip ips generating process
+ * [main] INFO org.mine.iptable.Bootstrap - loading ip...(may be a bit slow)
+ * [main] INFO org.mine.iptable.Bootstrap - loading ip finished
+ * ip 0.0.0.1 is in blacklist
+ * ip 0.0.0.99 is in blacklist
+ * ip 0.0.12.12 is in blacklist
+ * ip 0.1.134.159 is in blacklist
+ * ip 192.168.0.1 is not in blacklist
+ * ip 0.15.66.63 is in blacklist
+ * mem used 11 MB
+ * mem used 11 MB
+ */
 public class Bootstrap {
     private final static Logger logger = LoggerFactory.getLogger(Bootstrap.class);
 
     public static void main(String[] args) throws Exception {
+        runBigArraySort(args);
+        runIpList(args);
+    }
+
+    public static void runBigArraySort(String[] args) {
+        String dir = ".\\datasort";
+        BigArray bigArray = new BigArray.Builder(dir).pageSizeInBytes(10).maxPageCount(600).
+                subPageSizeInBytes(5).maxSubPageInMem(8).build();
+        int len = 25;
+        Random random = new Random();
+        for (int i = 0; i < len; i++) {
+            bigArray.putInt(i, random.nextInt(50));
+        }
+        for (int i = 0; i < len; i++) {
+            System.out.print(bigArray.getInt(i) + " ");
+        }
+        System.out.println();
+        BigArray bigArraySorted = BigArrayUtils.sortInt(bigArray, len, dir, "sorted");
+        for (int i = 0; i < len; i++) {
+            System.out.print(bigArraySorted.getInt(i) + " ");
+        }
+        System.out.println();
+    }
+
+    public static void runIpList(String[] args) throws Exception {
         String dir = ".\\data";
         /**
          * create a bigarray to store ip bits
          */
-        BigArray bigArray = new BigArray.Builder(dir).pageSizeInBytes(64 * 1024 * 1024).maxPageCount(10).
-                subPageSizeInBytes(1024 * 1024).maxSubPageInMem(10).build();
+        BigArray bigArray = new BigArray.Builder(dir).pageSizeInBytes(1024 * 1024).maxPageCount(600).
+                subPageSizeInBytes(128 * 1024).maxSubPageInMem(8).build();
         /**
          * generate ip
-         * 0.0.0.0 ~ 122.61.87.157
+         * 0.0.0.0 ~ 0.15.66.63
          */
-        long ipCount = 149727279;
-        String ipsPath = generateIps(dir, ipCount, false);
+        String ipsPath = generateIps(dir, 1000000, false);
         /**
          * load ip into bigarray
          */
-        loadIps(ipsPath, ipCount, bigArray);
+        loadIps(ipsPath, bigArray);
         /**
          * generate ipList
          */
@@ -46,6 +87,7 @@ public class Bootstrap {
         stats();
         bigArray.close();
         bigArray.deletePages();
+        stats();
     }
 
     public static List<String> getIpsToCheck() {
@@ -53,7 +95,9 @@ public class Bootstrap {
         blackList.add("0.0.0.1");
         blackList.add("0.0.0.99");
         blackList.add("0.0.12.12");
+        blackList.add("0.1.134.159");
         blackList.add("192.168.0.1");
+        blackList.add("0.15.66.63");
         return blackList;
     }
 
@@ -90,83 +134,35 @@ public class Bootstrap {
                 return filepath;
             }
         }
-        logger.info("start generating ip");
-        int threadCount = 20;
-        long segCount = count / 20;
-        long leftCount = count % 20;
-        if (segCount == 0) {
-            segCount = count;
-            threadCount = 1;
-            leftCount = 0;
+        logger.info("generating ip");
+        RandomAccessFile randomAccessFile = new RandomAccessFile(filepath, "rw");
+        int ipBytes = 0;
+        String ip = null;
+        for (long i = 0; i < count; i++, ipBytes++) {
+            ip = IpUtils.ip(ipBytes) + System.lineSeparator();
+            randomAccessFile.write(ip.getBytes());
         }
-        CountDownLatch countDownLatch = new CountDownLatch(threadCount);
-        for (int threadIndex = 0; threadIndex < threadCount; threadIndex++) {
-            int startIndex = (int)(threadIndex * segCount);
-            if (threadIndex == threadCount - 1) {
-                segCount += leftCount;
-            }
-            final long segCountFinal = segCount;
-            new Thread(() -> {
-                try {
-                    RandomAccessFile randomAccessFile = new RandomAccessFile(filepath, "rw");
-                    randomAccessFile.seek(startIndex);
-                    int ipBytes = startIndex;
-                    for (long i = 0; i < segCountFinal; i++, ipBytes++) {
-                        String ip = IpUtils.ip(ipBytes) + System.lineSeparator();
-                        randomAccessFile.write(ip.getBytes());
-                    }
-                    randomAccessFile.close();
-                } catch (Exception e) {
-                    logger.error("generateIps", e);
-                } finally {
-                    countDownLatch.countDown();
-                }
-            }).start();
-        }
-        countDownLatch.await();
-        logger.info("ip generating finished");
+        randomAccessFile.close();
+        logger.info("generating ip finished, from 0.0.0.0 to " + ("" + ip).trim());
         return dir + "ips.txt";
     }
 
-    public static void loadIps(String filepath, long ipCount, BigArray bigArray) throws Exception {
-        logger.info("start loading ip");
-        int threadCount = 20;
-        long segCount = ipCount / 20;
-        long leftCount = ipCount % 20;
-        if (segCount == 0) {
-            segCount = ipCount;
-            threadCount = 1;
-            leftCount = 0;
+    public static void loadIps(String filepath, BigArray bigArray) throws Exception {
+        if (bigArray.pageCount() > 0) {
+            logger.info("page files already exsit, skip loading ip");
+            return;
         }
-        CountDownLatch countDownLatch = new CountDownLatch(threadCount);
-        for (int threadIndex = 0; threadIndex < threadCount; threadIndex++) {
-            int startIndex = (int) (threadIndex * segCount);
-            if (threadIndex == threadCount - 1) {
-                segCount += leftCount;
-            }
-            final long segCountFinal = segCount;
-            new Thread(() -> {
-                try {
-                    RandomAccessFile randomAccessFile = new RandomAccessFile(filepath, "rw");
-                    randomAccessFile.seek(startIndex);
-                    String line;
-                    long index = 0;
-                    while (index++ < segCountFinal && (line = randomAccessFile.readLine()) != null) {
-                        int ipBytes = IpUtils.parse(line);
-                        int bytesIndex = IpUtils.byteIndicator(ipBytes);
-                        int bitIndicator = IpUtils.bitIndicator(ipBytes);
-                        byte mask = bigArray.getOrPutByte(bytesIndex);
-                        mask |= bitIndicator;
-                        bigArray.putByte(bytesIndex, mask);
-                    }
-                } catch (Exception e) {
-                    logger.error("loadIps", e);
-                } finally {
-                    countDownLatch.countDown();
-                }
-            }).start();
+        logger.info("loading ip...(may be a bit slow)");
+        RandomAccessFile randomAccessFile = new RandomAccessFile(filepath, "rw");
+        String line;
+        while ((line = randomAccessFile.readLine()) != null) {
+            int ipBytes = IpUtils.parse(line);
+            int bytesIndex = IpUtils.byteIndicator(ipBytes);
+            int bitIndicator = IpUtils.bitIndicator(ipBytes);
+            byte mask = bigArray.getOrPutByte(bytesIndex);
+            mask |= bitIndicator;
+            bigArray.putByte(bytesIndex, mask);
         }
-        countDownLatch.await();
         logger.info("loading ip finished");
     }
 

@@ -12,14 +12,16 @@ public class CompoundMappedPage implements IMappedPage {
     private final LRUCache<Integer, IMappedPage> pageCache;
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
+    private final int pageSizeInBytes;
     private final int subPageSizeInBytes;
     private final int maxSubPage;
     private volatile boolean closed = false;
     private volatile int pageCount = 0;
 
-    public CompoundMappedPage(RandomAccessFile randomAccessFile, int subPageSizeInBytes, int maxSubPage, int maxSubPageInMem) {
+    public CompoundMappedPage(RandomAccessFile randomAccessFile, int pageSizeInBytes, int subPageSizeInBytes, int maxSubPage, int maxSubPageInMem) {
         this.randomAccessFile = randomAccessFile;
         this.fileChannel = randomAccessFile.getChannel();
+        this.pageSizeInBytes = pageSizeInBytes;
         this.subPageSizeInBytes = subPageSizeInBytes;
         this.maxSubPage = maxSubPage;
         pageCache = new LRUCache<>(maxSubPageInMem);
@@ -97,6 +99,75 @@ public class CompoundMappedPage implements IMappedPage {
         }
     }
 
+    @Override
+    public byte[] loadBytes(int offset, int length) {
+        byte[] buf = null;
+        try {
+            buf = new byte[length];
+            MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, pageSizeInBytes);
+            mappedByteBuffer.get(buf, offset, length);
+            MappedPage.Cleaner.clean(mappedByteBuffer);
+            mappedByteBuffer = null;
+        } catch (Exception e) {
+            logger.error("load bytes", e);
+        }
+        return buf;
+    }
+
+    @Override
+    public void putBytes(byte[] buf, int offset, int length) {
+        try {
+            pageCache.expireAll();
+            MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, pageSizeInBytes);
+            mappedByteBuffer.put(buf, offset, length);
+            mappedByteBuffer.force();
+            MappedPage.Cleaner.clean(mappedByteBuffer);
+            mappedByteBuffer = null;
+        } catch (Exception e) {
+            logger.error("load bytes", e);
+        }
+    }
+
+    @Override
+    public int[] load4Bytes(int offset, int length) {
+        int[] buf = null;
+        try {
+            buf = new int[length];
+            MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, pageSizeInBytes);
+            for (int i = offset; i < length; i++) {
+                buf[i] = mappedByteBuffer.getInt(i * 4);
+            }
+            MappedPage.Cleaner.clean(mappedByteBuffer);
+            mappedByteBuffer = null;
+        } catch (Exception e) {
+            logger.error("load bytes", e);
+        }
+        return buf;
+    }
+
+    @Override
+    public void put4Bytes(int[] buf, int offset, int length) {
+        try {
+            pageCache.expireAll();
+            MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, 0, pageSizeInBytes);
+            for (int i = offset, bufIndex = 0; i < length; i++, bufIndex++) {
+                mappedByteBuffer.putInt(i * 4, buf[bufIndex]);
+            }
+            mappedByteBuffer.force();
+            MappedPage.Cleaner.clean(mappedByteBuffer);
+            mappedByteBuffer = null;
+        } catch (Exception e) {
+            logger.error("load bytes", e);
+        }
+    }
+
+    @Override
+    public void force() {
+        for (IMappedPage mappedPage: pageCache.values()) {
+            mappedPage.force();
+        }
+    }
+
     private int getSubPageIndex(int index) {
         return index / subPageSizeInBytes;
     }
@@ -117,7 +188,7 @@ public class CompoundMappedPage implements IMappedPage {
                 pageCount = subPageIndex + 1;
             }
             MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, subPageIndex * subPageSizeInBytes, subPageSizeInBytes);
-            return new MappedPage(mappedByteBuffer);
+            return new MappedPage(mappedByteBuffer, subPageSizeInBytes);
         } catch (Exception e) {
             logger.error("create page failed", e);
         }

@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 
 import static org.mine.iptable.util.CommonUtils.resizeFor;
 
@@ -78,6 +77,14 @@ public class MappedPageFactory implements AutoCloseable {
         return pageCount;
     }
 
+    public int pageSizeInBytes() {
+        return pageSizeInBytes;
+    }
+
+    public int subPageSizeInBytes() {
+        return subPageSizeInBytes;
+    }
+
     private IMappedPage loadPage(int index) {
         return pageCache.computeIfAbsent(index, this::createPage);
     }
@@ -93,7 +100,8 @@ public class MappedPageFactory implements AutoCloseable {
             if (index >= pageCount) {
                 pageCount = index + 1;
             }
-            return new CompoundMappedPage(randomAccessFile, subPageSizeInBytes, pageSizeInBytes / subPageSizeInBytes, maxSubPageInMem);
+            return new CompoundMappedPage(randomAccessFile, pageSizeInBytes, subPageSizeInBytes,
+                    pageSizeInBytes / subPageSizeInBytes, maxSubPageInMem);
         } catch (Exception e) {
             logger.error("create page failed", e);
         }

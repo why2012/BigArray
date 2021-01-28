@@ -3,7 +3,7 @@ package org.mine.iptable.util;
 public class CommonUtils {
     static final int MAXIMUM_CAPACITY = 1 << 30;
 
-    public static final int resizeFor(int cap) {
+    public static int resizeFor(int cap) {
         int n = cap - 1;
         n |= n >>> 1;
         n |= n >>> 2;
