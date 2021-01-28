@@ -15,9 +15,10 @@ import java.util.Random;
 
 /**
  * 示例输出:
- * 1 4 39 36 10 18 35 22 40 27 14 34 39 10 11 27 9 1 19 29 10 3 25 36 16
- * 1 1 3 4 9 10 10 10 11 14 16 18 19 22 25 27 27 29 34 35 36 36 39 39 40
- * [main] WARN org.mine.iptable.Bootstrap - .\data\ips.txt already exist, skip ips generating process
+ * 32 28 8 17 6 16 47 17 2 14 20 34 8 20 3 0 5 6 21 48 27 37 30 6 32
+ * 0 2 3 5 6 6 6 8 8 14 16 17 17 20 20 21 27 28 30 32 32 34 37 47 48
+ * [main] INFO org.mine.iptable.Bootstrap - generating ip
+ * [main] INFO org.mine.iptable.Bootstrap - generating ip finished, from 0.0.0.0 to 0.15.66.63
  * [main] INFO org.mine.iptable.Bootstrap - loading ip...(may be a bit slow)
  * [main] INFO org.mine.iptable.Bootstrap - loading ip finished
  * ip 0.0.0.1 is in blacklist
@@ -26,8 +27,8 @@ import java.util.Random;
  * ip 0.1.134.159 is in blacklist
  * ip 192.168.0.1 is not in blacklist
  * ip 0.15.66.63 is in blacklist
- * mem used 11 MB
- * mem used 11 MB
+ * mem used 13 MB
+ * mem used 13 MB
  */
 public class Bootstrap {
     private final static Logger logger = LoggerFactory.getLogger(Bootstrap.class);
