@@ -1,7 +1,7 @@
 package org.mine.iptable.bigtable;
 
-import com.sun.org.slf4j.internal.Logger;
-import com.sun.org.slf4j.internal.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -17,19 +17,40 @@ public class MappedPage implements IMappedPage {
         closed = false;
     }
 
+    @Override
     public int getInt(int index) {
         checkClosed();
         return byteBuffer.getInt(index);
     }
 
+    @Override
     public void putInt(int index, int v) {
         checkClosed();
         byteBuffer.putInt(index, v);
     }
 
+    @Override
     public void putInt(int v) {
         checkClosed();
         byteBuffer.putInt(v);
+    }
+
+    @Override
+    public byte getByte(int index) {
+        checkClosed();
+        return byteBuffer.get(index);
+    }
+
+    @Override
+    public void putByte(int index, byte v) {
+        checkClosed();
+        byteBuffer.put(index, v);
+    }
+
+    @Override
+    public void putByte(byte v) {
+        checkClosed();
+        byteBuffer.put(v);
     }
 
     private void checkClosed() {

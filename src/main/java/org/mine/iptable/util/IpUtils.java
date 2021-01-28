@@ -1,9 +1,7 @@
 package org.mine.iptable.util;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class IpUtils {
 
@@ -28,14 +26,14 @@ public class IpUtils {
         short b = (short)((bytes & 0x00FF0000) >>> 16);
         short c = (short)((bytes & 0x0000FF00) >>> 8);
         short d = (short)(bytes & 0x000000FF);
-        return "" + a + '.' + b + '.' + c + '.' + d;
+        return new String(("" + a + '.' + b + '.' + c + '.' + d).getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
     }
 
     public static int byteIndicator(int bytes) {
         return bytes >>> 3;
     }
 
-    public static int byteMask(int bytes) {
+    public static int bitIndicator(int bytes) {
         return 1 << (bytes & 7);
     }
 

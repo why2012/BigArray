@@ -1,22 +1,25 @@
 package org.mine.iptable.bigtable;
 
-import com.sun.org.slf4j.internal.Logger;
-import com.sun.org.slf4j.internal.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 public class CompoundMappedPage implements IMappedPage {
     private static Logger logger = LoggerFactory.getLogger(CompoundMappedPage.class);
     private final LRUCache<Integer, IMappedPage> pageCache;
+    private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
     private final int subPageSizeInBytes;
     private final int maxSubPage;
     private volatile boolean closed = false;
     private volatile int pageCount = 0;
 
-    public CompoundMappedPage(FileChannel fileChannel, int subPageSizeInBytes, int maxSubPage, int maxSubPageInMem) {
-        this.fileChannel = fileChannel;
+    public CompoundMappedPage(RandomAccessFile randomAccessFile, int subPageSizeInBytes, int maxSubPage, int maxSubPageInMem) {
+        this.randomAccessFile = randomAccessFile;
+        this.fileChannel = randomAccessFile.getChannel();
         this.subPageSizeInBytes = subPageSizeInBytes;
         this.maxSubPage = maxSubPage;
         pageCache = new LRUCache<>(maxSubPageInMem);
@@ -27,6 +30,7 @@ public class CompoundMappedPage implements IMappedPage {
         closed = true;
         pageCache.expireAll();
         fileChannel.close();
+        randomAccessFile.close();
     }
 
     @Override
@@ -42,7 +46,7 @@ public class CompoundMappedPage implements IMappedPage {
 
     private void checkPageCount(int subPageIndex) {
         if (subPageIndex + 1 > maxSubPage) {
-            throw new RuntimeException("maxSubPage " + maxSubPage + ", already used " + pageCount);
+            throw new IndexOutOfBoundsException("maxSubPage " + maxSubPage + ", already used " + pageCount);
         }
     }
 
@@ -61,7 +65,33 @@ public class CompoundMappedPage implements IMappedPage {
     @Override
     public void putInt(int v) {
         checkClosed();
-        loadPage(pageCount - 1).putInt(v);
+        if (pageCount == 0) {
+            loadPage(0).putInt(v);
+        } else {
+            loadPage(pageCount - 1).putInt(v);
+        }
+    }
+
+    @Override
+    public byte getByte(int index) {
+        checkClosed();
+        return loadPage(getSubPageIndex(index)).getByte(getIndexInSubPage(index));
+    }
+
+    @Override
+    public void putByte(int index, byte v) {
+        checkClosed();
+        loadPage(getSubPageIndex(index)).putByte(getIndexInSubPage(index), v);
+    }
+
+    @Override
+    public void putByte(byte v) {
+        checkClosed();
+        if (pageCount == 0) {
+            loadPage(0).putByte(v);
+        } else {
+            loadPage(pageCount - 1).putByte(v);
+        }
     }
 
     private int getSubPageIndex(int index) {

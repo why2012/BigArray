@@ -1,7 +1,7 @@
 package org.mine.iptable.bigtable;
 
-import com.sun.org.slf4j.internal.Logger;
-import com.sun.org.slf4j.internal.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -22,7 +22,7 @@ public class LRUCache<K, T extends ICloseable> {
 
     public LRUCache(int maxSize) {
         this.maxSize = maxSize;
-        cache = new LinkedHashMap<K, T>(Math.min(maxSize, 10), 0.75f, true) {
+        cache = new LinkedHashMap<K, T>(Math.max(3, Math.min(maxSize, 10)), 0.75f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<K, T> eldest) {
                 if (maxSize != -1 && size() > maxSize) {
@@ -43,6 +43,7 @@ public class LRUCache<K, T extends ICloseable> {
         try {
             readLock.lock();
             if (!cache.containsKey(key)) {
+                readLock.unlock();
                 writeLock.lock();
                 useWriteLock = true;
             }
@@ -50,8 +51,9 @@ public class LRUCache<K, T extends ICloseable> {
         } finally {
             if (useWriteLock) {
                 writeLock.unlock();
+            } else {
+                readLock.unlock();
             }
-            readLock.unlock();
         }
     }
 

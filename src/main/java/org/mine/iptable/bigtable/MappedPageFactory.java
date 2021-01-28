@@ -1,7 +1,7 @@
 package org.mine.iptable.bigtable;
 
-import com.sun.org.slf4j.internal.Logger;
-import com.sun.org.slf4j.internal.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -16,20 +16,20 @@ public class MappedPageFactory implements AutoCloseable {
     private final int pageSizeInBytes;
     private final int subPageSizeInBytes;
     private final int maxSubPageInMem;
-    private final String PAGE_NAME_PREFIX = "page-";
+    private final String PAGE_NAME_PREFIX;
     private final String PAGE_NAME_SUFFIX = ".dat";
     private final LRUCache<Integer, IMappedPage> pageCache;
     private volatile int pageCount = 0;
 
     public MappedPageFactory(String directory) {
-        this(directory, 64 * 1024 * 1024, -1, 4 * 1024, 10);
+        this(directory, "", 64 * 1024 * 1024, -1, 4 * 1024, 10);
     }
 
     public MappedPageFactory(String directory, int pageSizeInBytes) {
-        this(directory, pageSizeInBytes, -1, 4 * 1024, 10);
+        this(directory, "", pageSizeInBytes, -1, 4 * 1024, 10);
     }
 
-    public MappedPageFactory(String directory, int pageSizeInBytes, int maxPageInMem, int subPageSizeInBytes, int maxSubPageInMem) {
+    public MappedPageFactory(String directory, String dataFilePrefix, int pageSizeInBytes, int maxPageInMem, int subPageSizeInBytes, int maxSubPageInMem) {
         if (subPageSizeInBytes > pageSizeInBytes) {
             throw new IllegalArgumentException("subPageSizeInBytes > pageSizeInBytes");
         }
@@ -43,6 +43,7 @@ public class MappedPageFactory implements AutoCloseable {
         if (!directory.endsWith(File.separator)) {
             directory += File.separator;
         }
+        this.PAGE_NAME_PREFIX = dataFilePrefix + "page-";
         pageSizeInBytes = resizeFor(pageSizeInBytes);
         subPageSizeInBytes = resizeFor(subPageSizeInBytes);
         this.indexDirectory = directory;
@@ -54,6 +55,13 @@ public class MappedPageFactory implements AutoCloseable {
     }
 
     public IMappedPage getPage(int index) {
+        if (index >= pageCount || index < 0) {
+            throw new IndexOutOfBoundsException("illegal index " + index + ", while pageSize=" + pageCount);
+        }
+        return loadPage(index);
+    }
+
+    public IMappedPage getOrCreatePage(int index) {
         if (index > pageCount || index < 0) {
             throw new IllegalArgumentException("illegal index " + index + ", while pageSize=" + pageCount);
         }
@@ -61,7 +69,11 @@ public class MappedPageFactory implements AutoCloseable {
     }
 
     public IMappedPage getPage() {
-        return loadPage(pageCount - 1);
+        if (pageCount == 0) {
+            return loadPage(0);
+        } else {
+            return loadPage(pageCount - 1);
+        }
     }
 
     public int pageCount() {
@@ -78,12 +90,12 @@ public class MappedPageFactory implements AutoCloseable {
         if (indexPageFile.exists() && !indexPageFile.isFile()) {
             throw new IllegalStateException("index page already exist and is not a file: " + indexPagePath);
         }
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(indexPagePath, "rw")) {
+        try  {
+            RandomAccessFile randomAccessFile = new RandomAccessFile(indexPagePath, "rw");
             if (index >= pageCount) {
                 pageCount = index + 1;
             }
-            FileChannel channel = randomAccessFile.getChannel();
-            return new CompoundMappedPage(channel, subPageSizeInBytes, pageSizeInBytes / subPageSizeInBytes, maxSubPageInMem);
+            return new CompoundMappedPage(randomAccessFile, subPageSizeInBytes, pageSizeInBytes / subPageSizeInBytes, maxSubPageInMem);
         } catch (Exception e) {
             logger.error("create page failed", e);
         }
