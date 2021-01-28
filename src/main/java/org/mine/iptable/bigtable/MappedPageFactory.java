@@ -64,6 +64,10 @@ public class MappedPageFactory implements AutoCloseable {
         return loadPage(pageCount - 1);
     }
 
+    public int pageCount() {
+        return pageCount;
+    }
+
     private IMappedPage loadPage(int index) {
         return pageCache.computeIfAbsent(index, this::createPage);
     }

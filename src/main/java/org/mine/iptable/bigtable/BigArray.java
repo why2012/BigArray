@@ -61,19 +61,23 @@ public class BigArray implements AutoCloseable {
 
     public int getInt(long index) {
         index *= 4;
-        int pageIndex = (int)(index / pageSizeInBytes);
-        int indexInPage = (int)(index % pageSizeInBytes);
-        return mappedPageFactory.getPage(pageIndex).getInt(indexInPage);
+        return mappedPageFactory.getPage(getPageIndex(index)).getInt(getIndexInPage(index));
     }
 
     public void putInt(long index, int value) {
         index *= 4;
-        int pageIndex = (int)(index / pageSizeInBytes);
-        int indexInPage = (int)(index % pageSizeInBytes);
-        mappedPageFactory.getPage(pageIndex).putInt(indexInPage, value);
+        mappedPageFactory.getPage(getPageIndex(index)).putInt(getIndexInPage(index), value);
     }
 
     public void putInt(int value) {
         mappedPageFactory.getPage().putInt(value);
+    }
+
+    private int getPageIndex(long index) {
+        return (int)(index / pageSizeInBytes);
+    }
+
+    private int getIndexInPage(long index) {
+        return (int)(index % pageSizeInBytes);
     }
 }

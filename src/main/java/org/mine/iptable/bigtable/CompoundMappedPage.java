@@ -40,8 +40,8 @@ public class CompoundMappedPage implements IMappedPage {
         }
     }
 
-    private void checkPageCount() {
-        if (pageCount + 1 > maxSubPage) {
+    private void checkPageCount(int subPageIndex) {
+        if (subPageIndex + 1 > maxSubPage) {
             throw new RuntimeException("maxSubPage " + maxSubPage + ", already used " + pageCount);
         }
     }
@@ -78,7 +78,7 @@ public class CompoundMappedPage implements IMappedPage {
 
     private IMappedPage createPage(int subPageIndex) {
         checkClosed();
-        checkPageCount();
+        checkPageCount(subPageIndex);
         try {
             if (subPageIndex >= pageCount) {
                 pageCount = subPageIndex + 1;
