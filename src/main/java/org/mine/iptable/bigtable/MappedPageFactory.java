@@ -134,9 +134,9 @@ public class MappedPageFactory implements AutoCloseable {
         if (pageFile.exists() && pageFile.isFile()) {
             IMappedPage mappedPage = pageCache.remove(index);
             try {
-                if (mappedPage != null && !mappedPage.isClosed()) {
-                    mappedPage.close();
-                }
+                 if (mappedPage != null && !mappedPage.isClosed()) {
+                     mappedPage.close();
+                 }
                 return pageFile.delete();
             } catch (Exception e) {
                 logger.error("delete page error", e);

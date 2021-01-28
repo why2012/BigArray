@@ -1,6 +1,8 @@
 package org.mine.iptable;
 
 import org.mine.iptable.bigtable.BigArray;
+import org.mine.iptable.repository.MysqlDBRepository;
+import org.mine.iptable.repository.Repository;
 import org.mine.iptable.util.BigArrayUtils;
 import org.mine.iptable.util.IpUtils;
 import org.slf4j.Logger;
@@ -35,10 +37,10 @@ public class Bootstrap {
 
     public static void main(String[] args) throws Exception {
         runBigArraySort(args);
-        runIpList(args);
+        //runIpList(args);
     }
 
-    public static void runBigArraySort(String[] args) {
+    public static void runBigArraySort(String[] args) throws Exception {
         String dir = ".\\datasort";
         BigArray bigArray = new BigArray.Builder(dir).pageSizeInBytes(10).maxPageCount(600).
                 subPageSizeInBytes(5).maxSubPageInMem(8).build();
@@ -56,6 +58,28 @@ public class Bootstrap {
             System.out.print(bigArraySorted.getInt(i) + " ");
         }
         System.out.println();
+        try (Repository repository = new MysqlDBRepository("jdbc:mysql://localhost:3306/bigarray_repo?useUnicode=true&characterEncoding=utf8",
+                "root", "123456", "sorted_bigarray")) {
+            // save to db
+            logger.info("save bigarray to db");
+            BigArrayUtils.saveToRepo(bigArraySorted, repository);
+            // load from db
+            logger.info("load bigarray from db");
+            BigArray bigArrayFromDB = new BigArray.Builder(dir, "db").build();
+            bigArrayFromDB.close();
+            bigArrayFromDB.deletePages();
+            bigArrayFromDB = new BigArray.Builder(dir, "db").pageSizeInBytes(10).maxPageCount(600).
+                    subPageSizeInBytes(5).maxSubPageInMem(8).build();
+            BigArrayUtils.loadFromRepo(bigArrayFromDB, repository);
+            for (int i = 0; i < len; i++) {
+                System.out.print(bigArrayFromDB.getInt(i) + " ");
+            }
+            bigArrayFromDB.close();
+        } catch (Exception e) {
+            logger.error("db op failed", e);
+        }
+        bigArray.close();
+        bigArraySorted.close();
     }
 
     public static void runIpList(String[] args) throws Exception {

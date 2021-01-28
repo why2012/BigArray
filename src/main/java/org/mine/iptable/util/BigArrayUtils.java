@@ -2,6 +2,7 @@ package org.mine.iptable.util;
 
 import org.mine.iptable.bigtable.BigArray;
 import org.mine.iptable.bigtable.IMappedPage;
+import org.mine.iptable.repository.Repository;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -81,6 +82,24 @@ public class BigArrayUtils {
             int[] buf = mappedPage.load4Bytes(0, length);
             Arrays.sort(buf);
             bigArray.getMappedPage(i).put4Bytes(buf, 0, length);
+        }
+    }
+
+    public static void saveToRepo(BigArray bigArray, Repository repository) {
+        int pageCount = bigArray.pageCount();
+        for (int i = 0; i < pageCount; i++) {
+            IMappedPage mappedPage = bigArray.getMappedPage(i);
+            byte[] buf = mappedPage.loadBytes(0, bigArray.pageSizeInBytes());
+            repository.savePage(i, buf);
+        }
+    }
+
+    public static void loadFromRepo(BigArray bigArray, Repository repository) {
+        int pageCount = repository.pageCount();
+        for (int i = 0; i < pageCount; i++) {
+            IMappedPage mappedPage = bigArray.getMappedPage(i);
+            byte[] buf = repository.fetchPage(i);
+            mappedPage.putBytes(buf, 0, buf.length);
         }
     }
 }
