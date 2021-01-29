@@ -1,14 +1,18 @@
 package org.mine.iptable.bigtable;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public class BigArray implements AutoCloseable {
     private final int pageSizeInBytes;
     private final int maxPageCount;
-    private MappedPageFactory mappedPageFactory;
+    private final AtomicLong currentIndex;
+    private final MappedPageFactory mappedPageFactory;
 
     private BigArray(int pageSizeInBytes, int maxPageCount, MappedPageFactory pageFactory) {
         this.pageSizeInBytes = pageSizeInBytes;
         this.maxPageCount = maxPageCount;
         mappedPageFactory = pageFactory;
+        currentIndex = new AtomicLong(0);
     }
 
     public int pageSizeInBytes() {
@@ -109,7 +113,8 @@ public class BigArray implements AutoCloseable {
     }
 
     public void putInt(int value) {
-        mappedPageFactory.getPage().putInt(value);
+        long index = currentIndex.getAndIncrement();
+        putInt(index, value);
     }
 
     public byte getByte(long index) {
@@ -128,7 +133,8 @@ public class BigArray implements AutoCloseable {
     }
 
     public void putByte(byte value) {
-        mappedPageFactory.getPage().putByte(value);
+        long index = currentIndex.getAndIncrement();
+        putByte(index, value);
     }
 
     public int getPageIndex(long index) {
