@@ -18,7 +18,7 @@ public class MysqlDBRepository implements Repository {
 
     public MysqlDBRepository(String url, String username, String password, String namespace) {
         try {
-            Class.forName("com.mysql.jdbc.Driver");
+            // Class.forName("com.mysql.jdbc.Driver");
             connection = DriverManager.getConnection(url, username, password);
             this.namespace = namespace;
             createTable(connection);
@@ -49,10 +49,10 @@ public class MysqlDBRepository implements Repository {
     public int pageCount() {
         ResultSet resultSet = null;
         try (PreparedStatement statement = connection.prepareStatement("select count(1) from bigarray_repo where namespace=?")) {
-            statement.setString(0, namespace);
+            statement.setString(1, namespace);
             resultSet = statement.executeQuery();
             resultSet.next();
-            return resultSet.getInt(0);
+            return resultSet.getInt(1);
         } catch (Exception e) {
             logger.error("page count error", e);
             throw new RuntimeException(e);
@@ -71,11 +71,11 @@ public class MysqlDBRepository implements Repository {
     public byte[] fetchPage(int pageIndex) {
         ResultSet resultSet = null;
         try (PreparedStatement statement = connection.prepareStatement("select data from bigarray_repo where namespace=? and pageindex=?")) {
-            statement.setString(0, namespace);
-            statement.setInt(1, pageIndex);
+            statement.setString(1, namespace);
+            statement.setInt(2, pageIndex);
             resultSet = statement.executeQuery();
             resultSet.next();
-            InputStream inputStream = resultSet.getBlob(0).getBinaryStream();
+            InputStream inputStream = resultSet.getBlob(1).getBinaryStream();
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             byte[] buf = new byte[1024 * 1024];
             int n;
@@ -101,9 +101,9 @@ public class MysqlDBRepository implements Repository {
     public boolean savePage(int pageIndex, byte[] buf) {
         ResultSet resultSet = null;
         try (PreparedStatement statement = connection.prepareStatement("replace into bigarray_repo(namespace, pageindex, data) values(?, ?, ?)")) {
-            statement.setString(0, namespace);
-            statement.setInt(1, pageIndex);
-            statement.setBinaryStream(2, new ByteArrayInputStream(buf));
+            statement.setString(1, namespace);
+            statement.setInt(2, pageIndex);
+            statement.setBinaryStream(3, new ByteArrayInputStream(buf));
             return statement.executeUpdate() > 0;
         } catch (Exception e) {
             logger.error("fetch page error", e);

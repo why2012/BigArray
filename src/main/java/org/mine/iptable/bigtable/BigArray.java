@@ -143,6 +143,10 @@ public class BigArray implements AutoCloseable {
         return mappedPageFactory.getPage(pageIndex);
     }
 
+    public IMappedPage getMappedPageOrCreate(int pageIndex) {
+        return mappedPageFactory.getOrCreatePage(pageIndex);
+    }
+
     private void checkIndex(long index) {
         if (getPageIndex(index) + 1 > maxPageCount) {
             throw new IllegalArgumentException("index overflow, maxPageCount " + maxPageCount + ", required page index " + getPageIndex(index));

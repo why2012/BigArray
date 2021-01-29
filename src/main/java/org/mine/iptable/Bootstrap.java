@@ -16,9 +16,12 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * 示例输出:
- * 32 28 8 17 6 16 47 17 2 14 20 34 8 20 3 0 5 6 21 48 27 37 30 6 32
- * 0 2 3 5 6 6 6 8 8 14 16 17 17 20 20 21 27 28 30 32 32 34 37 47 48
+ * example outputs:
+ * 38 30 44 19 42 17 6 9 9 1 13 43 33 5 35 4 48 14 5 40 19 9 19 27 20
+ * 1 4 5 5 6 9 9 9 13 14 17 19 19 19 20 27 30 33 35 38 40 42 43 44 48
+ * [main] INFO org.mine.iptable.Bootstrap - save bigarray to db
+ * [main] INFO org.mine.iptable.Bootstrap - load bigarray from db
+ * 1 4 5 5 6 9 9 9 13 14 17 19 19 19 20 27 30 33 35 38 40 42 43 44 48
  * [main] INFO org.mine.iptable.Bootstrap - generating ip
  * [main] INFO org.mine.iptable.Bootstrap - generating ip finished, from 0.0.0.0 to 0.15.66.63
  * [main] INFO org.mine.iptable.Bootstrap - loading ip...(may be a bit slow)
@@ -29,15 +32,16 @@ import java.util.Random;
  * ip 0.1.134.159 is in blacklist
  * ip 192.168.0.1 is not in blacklist
  * ip 0.15.66.63 is in blacklist
- * mem used 13 MB
- * mem used 13 MB
+ * mem used 14 MB
+ * free mem
+ * mem used 14 MB
  */
 public class Bootstrap {
     private final static Logger logger = LoggerFactory.getLogger(Bootstrap.class);
 
     public static void main(String[] args) throws Exception {
         runBigArraySort(args);
-        //runIpList(args);
+        runIpList(args);
     }
 
     public static void runBigArraySort(String[] args) throws Exception {
@@ -58,7 +62,7 @@ public class Bootstrap {
             System.out.print(bigArraySorted.getInt(i) + " ");
         }
         System.out.println();
-        try (Repository repository = new MysqlDBRepository("jdbc:mysql://localhost:3306/bigarray_repo?useUnicode=true&characterEncoding=utf8",
+        try (Repository repository = new MysqlDBRepository("jdbc:mysql://localhost:3306/bigarray?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai",
                 "root", "123456", "sorted_bigarray")) {
             // save to db
             logger.info("save bigarray to db");
@@ -74,6 +78,7 @@ public class Bootstrap {
             for (int i = 0; i < len; i++) {
                 System.out.print(bigArrayFromDB.getInt(i) + " ");
             }
+            System.out.println();
             bigArrayFromDB.close();
         } catch (Exception e) {
             logger.error("db op failed", e);
@@ -110,6 +115,7 @@ public class Bootstrap {
          * print memory usage
          */
         stats();
+        System.out.println("free mem");
         bigArray.close();
         bigArray.deletePages();
         stats();

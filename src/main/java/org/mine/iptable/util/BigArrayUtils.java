@@ -97,7 +97,7 @@ public class BigArrayUtils {
     public static void loadFromRepo(BigArray bigArray, Repository repository) {
         int pageCount = repository.pageCount();
         for (int i = 0; i < pageCount; i++) {
-            IMappedPage mappedPage = bigArray.getMappedPage(i);
+            IMappedPage mappedPage = bigArray.getMappedPageOrCreate(i);
             byte[] buf = repository.fetchPage(i);
             mappedPage.putBytes(buf, 0, buf.length);
         }
